@@ -3,7 +3,7 @@
  * CLI para interactuar con SocialConnect / ODIS en Celo.
  * Permite resolver números de teléfono a direcciones de billeteras (ej. MiniPay).
  * Uso:
- *   npx -p celo-wallet celo-socialconnect resolve <phone> [--sepolia]
+ *   npx --package @zirus16/celo-utils celo-socialconnect resolve <phone> [--sepolia]
  */
 
 import { readFileSync, existsSync } from 'fs'
@@ -104,12 +104,12 @@ Para usar Sepolia Testnet, añade el flag --sepolia al final de tu comando,
 o define NETWORK=sepolia en tu archivo .env.
 
 Uso:
-  npx -p celo-wallet celo-socialconnect resolve <phone> [--sepolia]
+  npx --package @zirus16/celo-utils celo-socialconnect resolve <phone> [--sepolia]
       Busca la dirección de Celo asociada a un número de teléfono (E.164)
       utilizando ODIS / SocialConnect (ej. MiniPay).
 
 Ejemplos:
-  npx -p celo-wallet celo-socialconnect resolve +573108458405
+  npx --package @zirus16/celo-utils celo-socialconnect resolve +573108458405
 `)
 }
 

@@ -2,7 +2,7 @@
 /**
  * CLI para evaluar contratos inteligentes en Celo.
  * Uso:
- *   npx -p celo-wallet celo-contract info <address> [--sepolia]
+ *   npx --package @zirus16/celo-utils celo-contract info <address> [--sepolia]
  */
 
 import { createPublicClient, http, formatEther } from 'viem'
@@ -117,7 +117,7 @@ Para usar Sepolia Testnet, añade el flag --sepolia al final de tu comando,
 o define NETWORK=sepolia en tu archivo .env.
 
 Uso:
-  npx -p celo-wallet celo-contract info <address> [--sepolia]
+  npx --package @zirus16/celo-utils celo-contract info <address> [--sepolia]
       Evalúa un contrato y muestra:
        - Si es realmente un contrato o una cuenta normal (EOA)
        - Si el código fuente está verificado
@@ -125,8 +125,8 @@ Uso:
        - Un resumen de sus últimas 5 transacciones entrantes
 
 Ejemplos:
-  npx -p celo-wallet celo-contract info 0xA3E1C4FC10C47f5C2cd413C0451f06A73fCD0b94
-  npx -p celo-wallet celo-contract info 0xMiContrato --sepolia
+  npx --package @zirus16/celo-utils celo-contract info 0xA3E1C4FC10C47f5C2cd413C0451f06A73fCD0b94
+  npx --package @zirus16/celo-utils celo-contract info 0xMiContrato --sepolia
 `)
 }
 

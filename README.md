@@ -1,4 +1,4 @@
-# celo-wallet
+# @zirus16/celo-utils
 
 CLI de utilidades para **Celo Mainnet** y **Celo Sepolia**.
 
@@ -18,7 +18,7 @@ Permite:
 Sin instalar globalmente:
 
 ```bash
-npx celo-wallet --help
+npx @zirus16/celo-utils --help
 ```
 
 ## Uso
@@ -26,26 +26,26 @@ npx celo-wallet --help
 ### Wallet
 
 ```bash
-npx celo-wallet generate
-npx celo-wallet export
-npx celo-wallet balances
-npx celo-wallet balances 0xDireccion
-npx celo-wallet send USDC 0xDireccion 10.5
-npx celo-wallet drain 0xDestino --sepolia
-npx celo-wallet fund --sepolia
+npx @zirus16/celo-utils generate
+npx @zirus16/celo-utils export
+npx @zirus16/celo-utils balances
+npx @zirus16/celo-utils balances 0xDireccion
+npx @zirus16/celo-utils send USDC 0xDireccion 10.5
+npx @zirus16/celo-utils drain 0xDestino --sepolia
+npx @zirus16/celo-utils fund --sepolia
 ```
 
 ### Contratos
 
 ```bash
-npx -p celo-wallet celo-contract info 0xContrato
-npx -p celo-wallet celo-contract info 0xContrato --sepolia
+npx --package @zirus16/celo-utils celo-contract info 0xContrato
+npx --package @zirus16/celo-utils celo-contract info 0xContrato --sepolia
 ```
 
 ### SocialConnect
 
 ```bash
-npx -p celo-wallet celo-socialconnect resolve +573108458405
+npx --package @zirus16/celo-utils celo-socialconnect resolve +573108458405
 ```
 
 ## Redes
