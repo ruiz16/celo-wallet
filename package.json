@@ -1,0 +1,51 @@
+{
+  "name": "celo-wallet",
+  "version": "1.0.0",
+  "description": "CLI de utilidades para Celo Mainnet y Sepolia: balances, envios, faucet, contratos y SocialConnect.",
+  "type": "module",
+  "bin": {
+    "celo-wallet": "./wallet.js",
+    "celo-contract": "./contract.js",
+    "celo-socialconnect": "./socialconnect.js"
+  },
+  "files": [
+    "wallet.js",
+    "contract.js",
+    "socialconnect.js"
+  ],
+  "scripts": {
+    "wallet": "node ./wallet.js",
+    "contract": "node ./contract.js",
+    "socialconnect": "node ./socialconnect.js",
+    "pack:check": "npm pack --dry-run"
+  },
+  "keywords": [
+    "celo",
+    "cli",
+    "wallet",
+    "sepolia",
+    "contracts",
+    "blockscout",
+    "minipay",
+    "socialconnect",
+    "blockchain"
+  ],
+  "author": "@zirus16",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruiz16/celo-wallet.git"
+  },
+  "homepage": "https://github.com/ruiz16/celo-wallet",
+  "bugs": {
+    "url": "https://github.com/ruiz16/celo-wallet/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@celo/contractkit": "^11.0.0",
+    "@celo/identity": "^5.1.2",
+    "viem": "^2.52.2"
+  }
+}
