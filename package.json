@@ -1,5 +1,5 @@
 {
-  "name": "@zirus16/celo-utils",
+  "name": "celo-utils",
   "version": "1.0.0",
   "description": "CLI de utilidades para Celo Mainnet y Sepolia: balances, envios, faucet, contratos y SocialConnect.",
   "type": "module",
@@ -39,9 +39,6 @@
   "homepage": "https://github.com/ruiz16/celo-wallet",
   "bugs": {
     "url": "https://github.com/ruiz16/celo-wallet/issues"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "engines": {
     "node": ">=18"

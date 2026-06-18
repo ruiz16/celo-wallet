@@ -2,8 +2,8 @@
 /**
  * CLI para interactuar con Celo.
  * Uso:
- *   npx @zirus16/celo-utils balances [address]
- *   npx @zirus16/celo-utils send <token> <to> <amount>
+ *   npx celo-utils balances [address]
+ *   npx celo-utils send <token> <to> <amount>
  */
 
 import { createPublicClient, createWalletClient, http, parseEther, formatEther, parseUnits, formatUnits, encodeFunctionData } from 'viem'
@@ -63,7 +63,7 @@ const publicClient = createPublicClient({ chain: currentChain, transport: http(R
 function getWalletClient() {
   const pk = process.env.PRIVATE_KEY
   if (!pk) {
-    console.error('❌  No se encontró PRIVATE_KEY en .env — ejecuta primero: npx @zirus16/celo-utils generate')
+    console.error('❌  No se encontró PRIVATE_KEY en .env — ejecuta primero: npx celo-utils generate')
     process.exit(1)
   }
   
@@ -279,37 +279,37 @@ Para usar Sepolia Testnet, añade el flag --sepolia al final de tu comando,
 o define NETWORK=sepolia en tu archivo .env.
 
 Uso:
-  npx @zirus16/celo-utils generate [--sepolia]
+  npx celo-utils generate [--sepolia]
       Genera una nueva cuenta.
       Guarda la Private Key en .env y la Seed Phrase en seed.txt.
 
-  npx @zirus16/celo-utils export
+  npx celo-utils export
       Muestra la Seed Phrase (desde seed.txt) y la Private Key (desde .env).
 
-  npx @zirus16/celo-utils balances [address] [--sepolia]
+  npx celo-utils balances [address] [--sepolia]
       Muestra los balances de CELO, USDC, USDT, USDm, EURm, BRLm y COPm.
       Si no se especifica address, usa ADDRESS de .env.
 
-  npx @zirus16/celo-utils drain <to> [--sepolia]
+  npx celo-utils drain <to> [--sepolia]
       Vacía la cuenta configurada en tu .env (PRIVATE_KEY).
       Envía todo el saldo disponible de CELO a la dirección <to> destino,
       deduciendo automáticamente el costo exacto del gas.
 
-  npx @zirus16/celo-utils send <token> <to> <amount> [--sepolia]
+  npx celo-utils send <token> <to> <amount> [--sepolia]
       Envía tokens (CELO, USDC, USDT, USDm, EURm, BRLm, COPm) a una dirección.
       Si envías un token ERC20 soportado, la comisión (gas) se pagará
       automáticamente en ese mismo token usando Fee Abstraction (CIP-64).
 
-  npx @zirus16/celo-utils fund --sepolia
+  npx celo-utils fund --sepolia
       Pide tokens gratuitos de prueba al Faucet público de Celo Sepolia
       para la cuenta configurada en tu .env.
 
 Ejemplos:
-  npx @zirus16/celo-utils generate
-  npx @zirus16/celo-utils balances
-  npx @zirus16/celo-utils send USDC 0xDireccion 10.5
-  npx @zirus16/celo-utils drain 0xDestino --sepolia
-  npx @zirus16/celo-utils fund --sepolia
+  npx celo-utils generate
+  npx celo-utils balances
+  npx celo-utils send USDC 0xDireccion 10.5
+  npx celo-utils drain 0xDestino --sepolia
+  npx celo-utils fund --sepolia
 `)
 }
 
@@ -340,7 +340,7 @@ switch (cmd) {
   case 'send':
     if (!arg1 || !arg2 || !arg3) {
       console.log('❌  Faltan argumentos para "send".')
-      console.log('Uso: npx @zirus16/celo-utils send <token> <to> <amount>')
+      console.log('Uso: npx celo-utils send <token> <to> <amount>')
       process.exit(1)
     }
     await send(arg1, arg2, arg3)
