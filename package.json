@@ -1,10 +1,10 @@
 {
   "name": "celo-utils",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "CLI de utilidades para Celo Mainnet y Sepolia: balances, envios, faucet, contratos y SocialConnect.",
   "type": "module",
   "bin": {
-    "celo-utils": "./bin/celo-utils.js"
+    "celo-utils": "bin/celo-utils.js"
   },
   "directories": {
     "bin": "bin"
