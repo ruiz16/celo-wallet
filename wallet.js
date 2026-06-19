@@ -1,16 +1,14 @@
-#!/usr/bin/env node
 /**
- * CLI para interactuar con Celo.
- * Uso:
- *   npx celo-utils balances [address]
- *   npx celo-utils send <token> <to> <amount>
+ * Lógica para interactuar con Celo (Billeteras).
  */
 
 import { createPublicClient, createWalletClient, http, parseEther, formatEther, parseUnits, formatUnits, encodeFunctionData } from 'viem'
 import { celo, celoSepolia } from 'viem/chains'
-import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts'
+import { privateKeyToAccount } from 'viem/accounts'
 import { english, generateMnemonic, mnemonicToAccount } from 'viem/accounts'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
+import * as readline from 'readline'
+import qrcode from 'qrcode-terminal'
 
 // ── Cargar .env manualmente (sin dependencias extra) ──────────────────────────
 if (existsSync('.env')) {
@@ -24,7 +22,7 @@ if (existsSync('.env')) {
 const isSepolia = process.argv.includes('--sepolia') || process.env.NETWORK === 'sepolia'
 const currentChain = isSepolia ? celoSepolia : celo
 const RPC = isSepolia ? 'https://forno.celo-sepolia.celo-testnet.org' : 'https://forno.celo.org'
-const explorerUrl = isSepolia ? 'https://celo-sepolia.blockscout.com/tx' : 'https://celoscan.io/tx'
+export const explorerUrl = isSepolia ? 'https://celo-sepolia.blockscout.com/tx' : 'https://celoscan.io/tx'
 
 // Contratos verificados (docs.celo.org)
 const TOKENS_MAINNET = {
@@ -56,11 +54,50 @@ const ERC20_ABI = [
   { name: 'transfer', type: 'function', stateMutability: 'nonpayable',
     inputs: [{ name: 'to', type: 'address' }, { name: 'value', type: 'uint256' }],
     outputs: [{ type: 'bool' }] },
+  { name: 'decimals', type: 'function', stateMutability: 'view',
+    inputs: [], outputs: [{ type: 'uint8' }] },
+  { name: 'symbol', type: 'function', stateMutability: 'view',
+    inputs: [], outputs: [{ type: 'string' }] }
 ]
 
-const publicClient = createPublicClient({ chain: currentChain, transport: http(RPC) })
+export const publicClient = createPublicClient({ chain: currentChain, transport: http(RPC) })
 
-function getWalletClient() {
+export async function resolveToken(input) {
+  if (input.startsWith('0x')) {
+    try {
+      const decimals = await publicClient.readContract({
+        address: input,
+        abi: ERC20_ABI,
+        functionName: 'decimals'
+      });
+      const symbol = await publicClient.readContract({
+        address: input,
+        abi: ERC20_ABI,
+        functionName: 'symbol'
+      }).catch(() => 'CUSTOM');
+      
+      return {
+        isNative: false,
+        address: input,
+        decimals: decimals,
+        symbol: symbol,
+        adapter: undefined // No se asume fee abstraction para custom tokens
+      };
+    } catch (error) {
+      console.error(`❌  No se pudo leer la información del token en la dirección ${input}. Verifica que sea un contrato ERC20 válido.`);
+      process.exit(1);
+    }
+  } else {
+    const token = TOKENS[input.toUpperCase()];
+    if (!token) {
+      console.error(`❌  Token no soportado. Soportados: ${Object.keys(TOKENS).join(', ')} o una dirección de contrato (0x...).`);
+      process.exit(1);
+    }
+    return { ...token, symbol: input.toUpperCase() };
+  }
+}
+
+export function getWalletClient() {
   const pk = process.env.PRIVATE_KEY
   if (!pk) {
     console.error('❌  No se encontró PRIVATE_KEY en .env — ejecuta primero: npx celo-utils generate')
@@ -73,14 +110,14 @@ function getWalletClient() {
 
 // ── Comandos ──────────────────────────────────────────────────────────────────
 
-async function balances(address) {
+export async function balances(address) {
   const target = address ?? process.env.ADDRESS
   if (!target) { 
     console.error('❌  Proporciona una dirección o define ADDRESS en .env')
     process.exit(1) 
   }
 
-  console.log(`\nConsultando balances para ${target}...`)
+  console.log(`\nConsultando balances para ${target}`)
 
   const promises = Object.entries(TOKENS).map(async ([symbol, token]) => {
     try {
@@ -110,42 +147,84 @@ async function balances(address) {
   console.log('================\n')
 }
 
-async function send(tokenSymbol, to, amount) {
-  const token = TOKENS[tokenSymbol.toUpperCase()]
-  if (!token) {
-    console.error(`❌  Token no soportado. Soportados: ${Object.keys(TOKENS).join(', ')}`)
-    process.exit(1)
-  }
+export async function send(to, amount, tokenInput) {
+  const token = await resolveToken(tokenInput)
 
   const { client, account } = getWalletClient()
 
+  console.log(`\nEnviando ${amount} ${token.symbol} a ${to}`)
+  if (!token.isNative && token.adapter) {
+    console.log(`(El gas será pagado en ${token.symbol} via fee abstraction)`)
+  }
+
+  let hash
   if (token.isNative) {
-    console.log(`\nEnviando ${amount} CELO a ${to}...`)
-    const hash = await client.sendTransaction({
+    hash = await client.sendTransaction({
       account,
       to,
       value: parseEther(amount),
     })
-    console.log(`✓ TX enviada: ${explorerUrl}/${hash}`)
   } else {
-    console.log(`\nEnviando ${amount} ${tokenSymbol.toUpperCase()} a ${to}...`)
-    console.log(`(El gas será pagado en ${tokenSymbol.toUpperCase()} via fee abstraction)`)
-    
-    const hash = await client.sendTransaction({
+    const txObj = {
       account,
       to: token.address,
-      data: encodeFunctionData({ 
-        abi: ERC20_ABI, 
-        functionName: 'transfer', 
-        args: [to, parseUnits(amount, token.decimals)] 
-      }),
-      feeCurrency: token.adapter,
-    })
-    console.log(`✓ TX enviada: ${explorerUrl}/${hash}`)
+      data: encodeFunctionData({ abi: ERC20_ABI, functionName: 'transfer', args: [to, parseUnits(amount, token.decimals)] }),
+    }
+    if (token.adapter) txObj.feeCurrency = token.adapter
+    
+    hash = await client.sendTransaction(txObj)
   }
+
+  console.log(`✓ TX enviada: ${explorerUrl}/${hash}`)
 }
 
-function generateWallet() {
+export async function multisend(addresses, amountPerAddress, tokenInput) {
+  const token = await resolveToken(tokenInput)
+
+  const { client, account } = getWalletClient()
+  const addressList = addresses.split(',').map(a => a.trim())
+
+  console.log(`\n=== Multisend (Airdrop) ===`)
+  console.log(`Enviando ${amountPerAddress} ${token.symbol} a ${addressList.length} direcciones...`)
+  if (!token.isNative && token.adapter) {
+    console.log(`(El gas será pagado en ${token.symbol} via fee abstraction)`)
+  }
+
+  let successCount = 0;
+  for (let i = 0; i < addressList.length; i++) {
+    const to = addressList[i];
+    try {
+      let hash;
+      if (token.isNative) {
+        hash = await client.sendTransaction({
+          account,
+          to,
+          value: parseEther(amountPerAddress),
+        })
+      } else {
+        const txObj = {
+          account,
+          to: token.address,
+          data: encodeFunctionData({ 
+            abi: ERC20_ABI, 
+            functionName: 'transfer', 
+            args: [to, parseUnits(amountPerAddress, token.decimals)] 
+          })
+        }
+        if (token.adapter) txObj.feeCurrency = token.adapter
+
+        hash = await client.sendTransaction(txObj)
+      }
+      console.log(`[${i + 1}/${addressList.length}] ✅ Enviado a ${to} -> Hash: ${hash}`)
+      successCount++;
+    } catch (error) {
+      console.log(`[${i + 1}/${addressList.length}] ❌ Falló envío a ${to}: ${error.message.split('\n')[0]}`)
+    }
+  }
+  console.log(`\nCompletado: ${successCount} exitosos de ${addressList.length} intentos.`)
+}
+
+export function generateWallet() {
   const mnemonic = generateMnemonic(english)
   const account = mnemonicToAccount(mnemonic)
 
@@ -173,7 +252,7 @@ function generateWallet() {
   }
 }
 
-function exportWallet() {
+export function exportWallet() {
   let found = false;
   console.log('\n=== Exportar Wallet ===')
 
@@ -195,55 +274,36 @@ function exportWallet() {
   }
 }
 
-async function drain(to) {
-  if (!to) {
-    console.error('❌  Debes proporcionar una dirección de destino para vaciar la cuenta.')
+export function generateQR(address) {
+  const target = address ?? process.env.ADDRESS
+  if (!target) {
+    console.error('❌  Proporciona una dirección o define ADDRESS en .env')
     process.exit(1)
   }
 
-  const { client, account } = getWalletClient()
-  
-  const balance = await publicClient.getBalance({ address: account.address })
-  
-  // En Viem para Celo, estimamos el gas necesario para un envío estándar (21000)
-  const gasPrice = await publicClient.getGasPrice()
-  const gasLimit = 21000n
-  const gasCost = gasLimit * gasPrice
-  
-  if (balance <= gasCost) {
-    console.error(`❌  Balance insuficiente (${formatEther(balance)} CELO) para cubrir el costo de gas estimado (${formatEther(gasCost)} CELO).`)
-    process.exit(1)
-  }
-  
-  const sendAmount = balance - gasCost
-
-  console.log(`\n=== Vaciando cuenta ${account.address} ===`)
-  console.log(`Balance:    ${formatEther(balance)} CELO`)
-  console.log(`Gas cost:   ${formatEther(gasCost)} CELO`)
-  console.log(`Enviando:   ${formatEther(sendAmount)} CELO → ${to}`)
-
-  const hash = await client.sendTransaction({
-    account,
-    to,
-    value: sendAmount,
-    gas: gasLimit,
-    gasPrice: gasPrice
-  })
-  
-  console.log(`✓ TX enviada: ${explorerUrl}/${hash}`)
+  console.log(`\n📱 Código QR para la dirección:`)
+  console.log(target)
+  console.log()
+  qrcode.generate(target, { small: true })
 }
 
-async function fund() {
-  const { account } = getWalletClient()
+export async function fund(targetAddress) {
+  const addressToFund = targetAddress || process.env.ADDRESS;
 
-  if (!isSepolia) {
-    console.error('❌  El comando fund solo está disponible en la red de pruebas (Sepolia).')
-    process.exit(1)
+  if (!addressToFund) {
+    console.error('❌  Debes proporcionar una dirección o tener ADDRESS configurado en tu .env para pedir fondos.');
+    process.exit(1);
   }
 
-  console.log(`\n=== Faucet de Celo Sepolia ===`)
-  console.log(`Pidiendo fondos para: ${account.address}`)
-  console.log(`⏳ Conectando al faucet público...`)
+  if (!isSepolia) {
+    console.error('❌  El comando fund solo está disponible en la red de pruebas (Sepolia).');
+    console.error('👉  Usa: npx celo-utils fund --sepolia');
+    process.exit(1);
+  }
+
+  console.log(`\n=== Faucet de Celo Sepolia ===`);
+  console.log(`Pidiendo fondos para: ${addressToFund}`);
+  console.log(`⏳ Conectando al faucet público`);
 
   try {
     const response = await fetch('https://faucet.celo.org/api/v1/faucet', {
@@ -252,7 +312,7 @@ async function fund() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        beneficiary: account.address,
+        beneficiary: addressToFund,
         network: 'alfajores' // La API del faucet internamente todavía usa este identificador
       })
     })
@@ -260,91 +320,49 @@ async function fund() {
     const data = await response.json()
 
     if (response.ok) {
-      console.log(`✅ ¡Fondos enviados exitosamente!`)
-      console.log(`Los tokens deberían aparecer en tu balance en unos segundos.`)
+      console.log(`✅ ¡Fondos enviados exitosamente!`);
+      console.log(`Los tokens deberían aparecer en tu balance en unos segundos.`);
+      console.log(`Verifica con: npx celo-utils balances ${addressToFund} --sepolia`);
     } else {
-      console.log(`❌ Error del Faucet: ${data.message || 'Error desconocido'}`)
-      console.log(`Prueba pidiendo manualmente en: https://faucet.celo.org/celo-sepolia`)
+      console.log(`❌ Error del Faucet: ${data.message || 'Error desconocido'}`);
+      console.log(`Prueba pidiendo manualmente en: https://faucet.celo.org/celo-sepolia`);
     }
   } catch (error) {
-    console.error(`❌ Falló la conexión al Faucet: ${error.message}`)
-    console.log(`Prueba pidiendo manualmente en: https://faucet.celo.org/celo-sepolia`)
+    console.error(`❌ Falló la conexión al Faucet: ${error.message}`);
+    console.log(`Prueba pidiendo manualmente en: https://faucet.celo.org/celo-sepolia`);
   }
 }
-function showHelp() {
-  console.log(`
-CLI de utilidades de Celo (${isSepolia ? 'Sepolia Testnet' : 'Mainnet'})
 
-Para usar Sepolia Testnet, añade el flag --sepolia al final de tu comando,
-o define NETWORK=sepolia en tu archivo .env.
+export async function validateWallet(address) {
+  if (!address || !address.startsWith('0x')) {
+    console.error('❌  Debes proporcionar una dirección válida (0x...).');
+    process.exit(1);
+  }
 
-Uso:
-  npx celo-utils generate [--sepolia]
-      Genera una nueva cuenta.
-      Guarda la Private Key en .env y la Seed Phrase en seed.txt.
+  console.log(`\n🔍 Validando billetera: ${address} en ${isSepolia ? 'Sepolia Testnet' : 'Mainnet'}`);
+  
+  try {
+    const balance = await publicClient.getBalance({ address });
+    const txCount = await publicClient.getTransactionCount({ address });
 
-  npx celo-utils export
-      Muestra la Seed Phrase (desde seed.txt) y la Private Key (desde .env).
-
-  npx celo-utils balances [address] [--sepolia]
-      Muestra los balances de CELO, USDC, USDT, USDm, EURm, BRLm y COPm.
-      Si no se especifica address, usa ADDRESS de .env.
-
-  npx celo-utils drain <to> [--sepolia]
-      Vacía la cuenta configurada en tu .env (PRIVATE_KEY).
-      Envía todo el saldo disponible de CELO a la dirección <to> destino,
-      deduciendo automáticamente el costo exacto del gas.
-
-  npx celo-utils send <token> <to> <amount> [--sepolia]
-      Envía tokens (CELO, USDC, USDT, USDm, EURm, BRLm, COPm) a una dirección.
-      Si envías un token ERC20 soportado, la comisión (gas) se pagará
-      automáticamente en ese mismo token usando Fee Abstraction (CIP-64).
-
-  npx celo-utils fund --sepolia
-      Pide tokens gratuitos de prueba al Faucet público de Celo Sepolia
-      para la cuenta configurada en tu .env.
-
-Ejemplos:
-  npx celo-utils generate
-  npx celo-utils balances
-  npx celo-utils send USDC 0xDireccion 10.5
-  npx celo-utils drain 0xDestino --sepolia
-  npx celo-utils fund --sepolia
-`)
-}
-
-// ── Router ────────────────────────────────────────────────────────────────────
-const [,, cmd, arg1, arg2, arg3] = process.argv
-
-switch (cmd) {
-  case 'help':
-  case '--help':
-  case '-h':
-    showHelp()
-    break
-  case 'generate':
-    generateWallet()
-    break
-  case 'export':
-    exportWallet()
-    break
-  case 'balances':   
-    await balances(arg1)
-    break
-  case 'drain':
-    await drain(arg1)
-    break
-  case 'fund':
-    await fund()
-    break
-  case 'send':
-    if (!arg1 || !arg2 || !arg3) {
-      console.log('❌  Faltan argumentos para "send".')
-      console.log('Uso: npx celo-utils send <token> <to> <amount>')
-      process.exit(1)
+    console.log(`\n=== Resultados de Validación ===`);
+    if (balance > 0n || txCount > 0) {
+      console.log(`✅ ¡La billetera está ACTIVA en Celo!`);
+      console.log(`   - Balance Nativo: ${formatEther(balance)} CELO`);
+      console.log(`   - Transacciones : ${txCount} enviadas desde esta cuenta`);
+    } else {
+      console.log(`⚠️  La billetera parece estar INACTIVA en Celo.`);
+      console.log(`   - No tiene balance de CELO.`);
+      console.log(`   - Nunca ha enviado transacciones en esta red.`);
+      if (isSepolia) {
+        console.log(`\n💡 TIP: Puedes pedir tokens de prueba ejecutando:`);
+        console.log(`   npx celo-utils fund ${address} --sepolia`);
+      }
     }
-    await send(arg1, arg2, arg3)
-    break
-  default:
-    showHelp()
+    console.log(`================================\n`);
+  } catch (error) {
+    console.error(`❌  Error al validar la billetera: ${error.message}`);
+  }
 }
+
+

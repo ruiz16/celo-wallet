@@ -7,8 +7,6 @@
  */
 
 import { readFileSync, existsSync } from 'fs'
-import { newKit } from '@celo/contractkit'
-import { OdisUtils } from '@celo/identity'
 
 // ── Cargar .env manualmente ───────────────────────────────────────────────────
 if (existsSync('.env')) {
@@ -24,11 +22,24 @@ const RPC = isSepolia ? 'https://forno.celo-sepolia.celo-testnet.org' : 'https:/
 
 // ── Comandos ──────────────────────────────────────────────────────────────────
 
-async function resolvePhone(phoneE164) {
-  if (!phoneE164 || !phoneE164.startsWith('+')) {
-    console.error('❌  Debes proporcionar un número en formato E.164 (ej: +573108458405)')
-    process.exit(1)
+export async function resolvePhone(phoneE164) {
+  let newKit, OdisUtils;
+  try {
+    const contractKit = await import('@celo/contractkit');
+    const identity = await import('@celo/identity');
+    newKit = contractKit.newKit;
+    OdisUtils = identity.OdisUtils;
+  } catch (error) {
+    console.error('❌  Las funciones de SocialConnect requieren paquetes adicionales que son pesados.');
+    console.error('👉  Para usar este comando, por favor instálalos ejecutando:');
+    console.error('    npm install @celo/contractkit @celo/identity');
+    process.exit(1);
   }
+
+  if (!phoneE164 || !phoneE164.startsWith('+')) {
+      console.error('❌  Debes proporcionar un número en formato E.164 (ej: +12345678900)')
+      process.exit(1)
+    }
 
   const pk = process.env.PRIVATE_KEY
   if (!pk) {
@@ -36,7 +47,7 @@ async function resolvePhone(phoneE164) {
     process.exit(1)
   }
 
-  console.log(`\nBuscando billetera asociada a ${phoneE164} usando SocialConnect...`)
+  console.log(`\nBuscando billetera asociada a ${phoneE164} usando SocialConnect`)
 
   try {
     const kit = newKit(RPC)
@@ -104,27 +115,34 @@ Para usar Sepolia Testnet, añade el flag --sepolia al final de tu comando,
 o define NETWORK=sepolia en tu archivo .env.
 
 Uso:
-  npx --package celo-utils celo-socialconnect resolve <phone> [--sepolia]
+  npx celo-utils socialconnect resolve <phone> [--sepolia]
       Busca la dirección de Celo asociada a un número de teléfono (E.164)
       utilizando ODIS / SocialConnect (ej. MiniPay).
 
 Ejemplos:
-  npx --package celo-utils celo-socialconnect resolve +573108458405
+  npx celo-utils socialconnect resolve +12345678900
 `)
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
-const [,, cmd, arg1] = process.argv
+import { fileURLToPath } from 'url'
 
-switch (cmd) {
-  case 'help':
-  case '--help':
-  case '-h':
-    showHelp()
-    break
-  case 'resolve':
-    await resolvePhone(arg1)
-    break
-  default:
-    showHelp()
+const isMain = process.argv[1] === fileURLToPath(import.meta.url)
+
+if (isMain) {
+  const [,, cmd, arg1] = process.argv
+
+  switch (cmd) {
+    case 'help':
+    case '--help':
+    case '-h':
+      showHelp()
+      break
+    case 'resolve':
+      await resolvePhone(arg1)
+      break
+    default:
+      showHelp()
+  }
 }
+

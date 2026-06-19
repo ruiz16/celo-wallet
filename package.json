@@ -4,19 +4,18 @@
   "description": "CLI de utilidades para Celo Mainnet y Sepolia: balances, envios, faucet, contratos y SocialConnect.",
   "type": "module",
   "bin": {
-    "celo-utils": "./wallet.js",
-    "celo-contract": "./contract.js",
-    "celo-socialconnect": "./socialconnect.js"
+    "celo-utils": "./cli.js"
   },
   "files": [
+    "cli.js",
     "wallet.js",
     "contract.js",
-    "socialconnect.js"
+    "network.js",
+    "socialconnect.js",
+    "advanced.js"
   ],
   "scripts": {
-    "wallet": "node ./wallet.js",
-    "contract": "node ./contract.js",
-    "socialconnect": "node ./socialconnect.js",
+    "wallet": "node ./cli.js",
     "pack:check": "npm pack --dry-run"
   },
   "keywords": [
@@ -44,8 +43,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@celo/contractkit": "^11.0.0",
-    "@celo/identity": "^5.1.2",
+    "qrcode-terminal": "^0.12.0",
     "viem": "^2.52.2"
   }
 }

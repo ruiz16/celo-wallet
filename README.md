@@ -32,20 +32,25 @@ npx celo-utils balances
 npx celo-utils balances 0xDireccion
 npx celo-utils send USDC 0xDireccion 10.5
 npx celo-utils drain 0xDestino --sepolia
-npx celo-utils fund --sepolia
+npx celo-utils validate 0xDireccion
+npx celo-utils network-info --all
+npx celo-utils fund 0xDireccion --sepolia
+npx celo-utils multisend USDC 0xDir1,0xDir2 5
+npx celo-utils qr 0xDireccion
+npx celo-utils history 0xDireccion --limit 5
 ```
 
 ### Contratos
 
 ```bash
-npx --package celo-utils celo-contract info 0xContrato
-npx --package celo-utils celo-contract info 0xContrato --sepolia
+npx celo-utils contract info 0xContrato
+npx celo-utils contract info 0xContrato --sepolia
 ```
 
 ### SocialConnect
 
 ```bash
-npx --package celo-utils celo-socialconnect resolve +573108458405
+npx celo-utils socialconnect resolve +12345678900
 ```
 
 ## Redes
