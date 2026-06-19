@@ -7,8 +7,8 @@ Permite:
 - Generar wallets
 - Exportar credenciales locales
 - Consultar balances
-- Enviar tokens oficiales de Celo
-- Vaciar una wallet de CELO
+- Enviar tokens oficiales o ERC20 por direccion
+- Vaciar una wallet o un token especifico
 - Pedir fondos de prueba en Sepolia
 - Evaluar contratos
 - Resolver telefonos con SocialConnect / ODIS
@@ -30,12 +30,12 @@ npx celo-utils generate
 npx celo-utils export
 npx celo-utils balances
 npx celo-utils balances 0xDireccion
-npx celo-utils send USDC 0xDireccion 10.5
-npx celo-utils drain 0xDestino --sepolia
+npx celo-utils send 0xDireccion 10.5 USDC
+npx celo-utils drain 0xDestino CELO --sepolia
 npx celo-utils validate 0xDireccion
 npx celo-utils network-info --all
 npx celo-utils fund 0xDireccion --sepolia
-npx celo-utils multisend USDC 0xDir1,0xDir2 5
+npx celo-utils multisend 0xDir1,0xDir2 5 USDC
 npx celo-utils qr 0xDireccion
 npx celo-utils history 0xDireccion --limit 5
 ```
@@ -69,6 +69,8 @@ ADDRESS=0x...
 NETWORK=mainnet
 ```
 
+Tambien puedes copiar `.env.example` a `.env` para empezar mas rapido.
+
 La frase semilla se guarda en `seed.txt` cuando generas una wallet.
 
 ## Tokens Soportados
@@ -80,6 +82,8 @@ La frase semilla se guarda en `seed.txt` cuando generas una wallet.
 - `EURm`
 - `BRLm`
 - `COPm`
+
+Tambien puedes usar directamente una direccion de contrato `0x...` en `send`, `multisend` y `drain`.
 
 ## Autor
 

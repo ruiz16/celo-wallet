@@ -1,19 +1,5 @@
-import { readFileSync, existsSync } from 'fs'
 import { formatEther } from 'viem'
-
-// ── Cargar .env manualmente ───────────────────────────────────────────────────
-if (existsSync('.env')) {
-  readFileSync('.env', 'utf8').split('\n').forEach(line => {
-    const [k, ...rest] = line.split('=')
-    if (k && rest.length) process.env[k.trim()] = rest.join('=').trim()
-  })
-}
-
-const isSepolia = process.argv.includes('--sepolia') || process.env.NETWORK === 'sepolia'
-
-const BLOCKSCOUT_API = isSepolia 
-  ? 'https://celo-sepolia.blockscout.com/api/v2'
-  : 'https://celo.blockscout.com/api/v2'
+import { BLOCKSCOUT_API, isSepolia } from '../lib/network.js'
 
 export async function history(address) {
   const target = address ?? process.env.ADDRESS

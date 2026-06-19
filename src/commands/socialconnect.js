@@ -6,19 +6,7 @@
  *   npx --package celo-utils celo-socialconnect resolve <phone> [--sepolia]
  */
 
-import { readFileSync, existsSync } from 'fs'
-
-// ── Cargar .env manualmente ───────────────────────────────────────────────────
-if (existsSync('.env')) {
-  readFileSync('.env', 'utf8').split('\n').forEach(line => {
-    const [k, ...rest] = line.split('=')
-    if (k && rest.length) process.env[k.trim()] = rest.join('=').trim()
-  })
-}
-
-// ── Configuración de Red ──────────────────────────────────────────────────────
-const isSepolia = process.argv.includes('--sepolia') || process.env.NETWORK === 'sepolia'
-const RPC = isSepolia ? 'https://forno.celo-sepolia.celo-testnet.org' : 'https://forno.celo.org'
+import { isSepolia, RPC } from '../lib/network.js'
 
 // ── Comandos ──────────────────────────────────────────────────────────────────
 
@@ -145,4 +133,3 @@ if (isMain) {
       showHelp()
   }
 }
-

@@ -5,29 +5,24 @@
  *   npx --package celo-utils celo-contract info <address> [--sepolia]
  */
 
-import { createPublicClient, http, formatEther } from 'viem'
+import { createPublicClient, formatEther, http } from 'viem'
 import { celo, celoSepolia } from 'viem/chains'
-import { readFileSync, existsSync } from 'fs'
+import { BLOCKSCOUT_API, isSepolia, publicClient } from '../lib/network.js'
 
-// ── Cargar .env manualmente (sin dependencias extra) ──────────────────────────
-if (existsSync('.env')) {
-  readFileSync('.env', 'utf8').split('\n').forEach(line => {
-    const [k, ...rest] = line.split('=')
-    if (k && rest.length) process.env[k.trim()] = rest.join('=').trim()
-  })
+function getNetworkContext() {
+  return {
+    currentName: isSepolia ? 'Sepolia Testnet' : 'Mainnet',
+    otherName: isSepolia ? 'Mainnet' : 'Sepolia Testnet',
+    otherFlag: isSepolia ? '' : ' --sepolia',
+    otherExplorerBase: isSepolia
+      ? 'https://celo.blockscout.com/address'
+      : 'https://celo-sepolia.blockscout.com/address',
+    otherClient: createPublicClient({
+      chain: isSepolia ? celo : celoSepolia,
+      transport: http(isSepolia ? 'https://forno.celo.org' : 'https://forno.celo-sepolia.celo-testnet.org'),
+    }),
+  }
 }
-
-// ── Configuración de Red ──────────────────────────────────────────────────────
-const isSepolia = process.argv.includes('--sepolia') || process.env.NETWORK === 'sepolia'
-const currentChain = isSepolia ? celoSepolia : celo
-const RPC = isSepolia ? 'https://forno.celo-sepolia.celo-testnet.org' : 'https://forno.celo.org'
-
-// API de Blockscout para consultar información del contrato (no requiere API Key)
-const BLOCKSCOUT_API = isSepolia 
-  ? 'https://celo-sepolia.blockscout.com/api/v2'
-  : 'https://celo.blockscout.com/api/v2'
-
-const publicClient = createPublicClient({ chain: currentChain, transport: http(RPC) })
 
 // ── Comandos ──────────────────────────────────────────────────────────────────
 
@@ -37,19 +32,37 @@ export async function getContractInfo(address) {
     process.exit(1)
   }
 
-  console.log(`\nEvaluando contrato ${address} en ${isSepolia ? 'Sepolia Testnet' : 'Mainnet'}`)
+  const { currentName, otherName, otherFlag, otherExplorerBase, otherClient } = getNetworkContext()
+
+  console.log(`\nEvaluando contrato ${address} en ${currentName}`)
   console.log('Recopilando datos\n')
 
   try {
-    // 1. Obtener balance nativo desde el nodo (viem)
-    const balance = await publicClient.getBalance({ address })
-    
-    // 2. Comprobar si realmente es un contrato (tiene bytecode)
-    const bytecode = await publicClient.getBytecode({ address })
+    // 1. Obtener balance nativo y bytecode en la red actual
+    const [balance, bytecode] = await Promise.all([
+      publicClient.getBalance({ address }),
+      publicClient.getBytecode({ address }),
+    ])
     const isContract = bytecode && bytecode !== '0x'
 
     if (!isContract) {
-      console.warn(`⚠️  Advertencia: La dirección no tiene código desplegado (podría ser una EOA o no estar desplegada aún).`)
+      const otherBytecode = await otherClient.getBytecode({ address })
+      const existsOnOtherNetwork = otherBytecode && otherBytecode !== '0x'
+
+      console.warn(`⚠️  No encontré un contrato desplegado en ${currentName} para esta dirección.`)
+
+      if (existsOnOtherNetwork) {
+        console.log(`✅  Sí encontré código desplegado en ${otherName}.`)
+        console.log(`Parece que esta dirección corresponde a un contrato de ${otherName}, no de ${currentName}.`)
+        console.log(`Prueba este comando:`)
+        console.log(`   npx celo-utils contract info ${address}${otherFlag}`)
+        console.log(`\nExplorador sugerido:`)
+        console.log(`   ${otherExplorerBase}/${address}`)
+        return
+      }
+
+      console.log(`No encontré código desplegado ni en ${currentName} ni en ${otherName}.`)
+      console.log('Esta dirección no parece ser un contrato en las redes soportadas; puede ser una billetera normal o una dirección sin despliegue.')
     }
 
     // 3. Consultar la API de Blockscout V2 para transacciones y detalles
@@ -121,7 +134,7 @@ export async function getContractInfo(address) {
     
     console.log(`=== Detalles del Contrato ===`)
     console.log(`Dirección:       ${address}`)
-    console.log(`Tipo:            ${dataAddress.is_contract ? 'Smart Contract' : 'Cuenta Externa (EOA)'}`)
+    console.log(`Tipo:            ${dataAddress.is_contract ? 'Smart Contract' : 'Dirección normal (sin contrato desplegado)'}`)
     
     if (dataAddress.is_contract) {
       console.log(`Verificado:      ${dataAddress.is_verified ? '✅ Sí' : '❌ No'}`)
@@ -200,7 +213,8 @@ o define NETWORK=sepolia en tu archivo .env.
 Uso:
   npx celo-utils contract info <address> [--sepolia]
       Evalúa un contrato y muestra:
-       - Si es realmente un contrato o una cuenta normal (EOA)
+       - Si es realmente un contrato o una dirección normal sin contrato desplegado
+       - Si no existe en la red actual, revisa también la otra red (Mainnet/Sepolia)
        - Si el código fuente está verificado
        - Balance de CELO y cantidad de tokens ERC20 que posee
        - Un resumen de sus últimas 5 transacciones entrantes
@@ -232,4 +246,3 @@ if (isMain) {
       showHelp()
   }
 }
-
