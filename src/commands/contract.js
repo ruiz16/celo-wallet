@@ -2,7 +2,7 @@
 /**
  * CLI para evaluar contratos inteligentes en Celo.
  * Uso:
- *   npx --package celo-utils celo-contract info <address> [--sepolia]
+ *   npx celo-utils contract info <address> [--sepolia]
  */
 
 import { createPublicClient, formatEther, http } from 'viem'
@@ -203,7 +203,7 @@ export async function getContractInfo(address) {
   }
 }
 
-function showHelp() {
+export function showContractHelp() {
   console.log(`
 CLI de Evaluación de Contratos Celo (${isSepolia ? 'Sepolia Testnet' : 'Mainnet'})
 
@@ -237,12 +237,12 @@ if (isMain) {
     case 'help':
     case '--help':
     case '-h':
-      showHelp()
+      showContractHelp()
       break
     case 'info':
       await getContractInfo(arg1)
       break
     default:
-      showHelp()
+      showContractHelp()
   }
 }

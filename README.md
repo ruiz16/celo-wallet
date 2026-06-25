@@ -45,12 +45,14 @@ npx celo-utils history 0xDireccion --limit 5
 ```bash
 npx celo-utils contract info 0xContrato
 npx celo-utils contract info 0xContrato --sepolia
+npx celo-utils contract --help
 ```
 
 ### SocialConnect
 
 ```bash
 npx celo-utils socialconnect resolve +12345678900
+npx celo-utils socialconnect --help
 ```
 
 ## Redes
@@ -81,9 +83,23 @@ La frase semilla se guarda en `seed.txt` cuando generas una wallet.
 - `USDm`
 - `EURm`
 - `BRLm`
-- `COPm`
+- `COPM`
 
 Tambien puedes usar directamente una direccion de contrato `0x...` en `send`, `multisend` y `drain`.
+
+## Publicacion
+
+Scripts utiles:
+
+```bash
+npm run pack:check
+npm run audit:prod
+npm run check
+npm run release:patch
+npm run release:minor
+```
+
+`prepublishOnly` ejecuta las validaciones antes de publicar.
 
 ## Autor
 

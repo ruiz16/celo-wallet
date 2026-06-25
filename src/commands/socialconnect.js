@@ -3,7 +3,7 @@
  * CLI para interactuar con SocialConnect / ODIS en Celo.
  * Permite resolver números de teléfono a direcciones de billeteras (ej. MiniPay).
  * Uso:
- *   npx --package celo-utils celo-socialconnect resolve <phone> [--sepolia]
+ *   npx celo-utils socialconnect resolve <phone> [--sepolia]
  */
 
 import { isSepolia, RPC } from '../lib/network.js'
@@ -95,7 +95,7 @@ export async function resolvePhone(phoneE164) {
   }
 }
 
-function showHelp() {
+export function showSocialConnectHelp() {
   console.log(`
 CLI de SocialConnect / ODIS (${isSepolia ? 'Sepolia Testnet' : 'Mainnet'})
 
@@ -124,12 +124,12 @@ if (isMain) {
     case 'help':
     case '--help':
     case '-h':
-      showHelp()
+      showSocialConnectHelp()
       break
     case 'resolve':
       await resolvePhone(arg1)
       break
     default:
-      showHelp()
+      showSocialConnectHelp()
   }
 }
