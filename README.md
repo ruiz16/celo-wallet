@@ -30,6 +30,8 @@ npx celo-utils generate
 npx celo-utils export
 npx celo-utils balances
 npx celo-utils balances 0xDireccion
+npx celo-utils balances 0xDireccion --token USDC
+npx celo-utils balances --token 0xToken
 npx celo-utils send 0xDireccion 10.5 USDC
 npx celo-utils drain 0xDestino CELO --sepolia
 npx celo-utils validate 0xDireccion
@@ -46,6 +48,9 @@ npx celo-utils history 0xDireccion --limit 5
 npx celo-utils contract info 0xContrato
 npx celo-utils contract info 0xContrato --sepolia
 npx celo-utils contract --help
+npx celo-utils token info USDC
+npx celo-utils token info 0xToken
+npx celo-utils account info 0xDireccion
 ```
 
 ### SocialConnect
@@ -86,6 +91,13 @@ La frase semilla se guarda en `seed.txt` cuando generas una wallet.
 - `COPM`
 
 Tambien puedes usar directamente una direccion de contrato `0x...` en `send`, `multisend` y `drain`.
+
+Tambien puedes consultar un token puntual con:
+
+```bash
+npx celo-utils balances 0xDireccion --token USDC
+npx celo-utils balances 0xDireccion --token 0xToken
+```
 
 ## Publicacion
 

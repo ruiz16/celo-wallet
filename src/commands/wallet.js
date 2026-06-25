@@ -73,7 +73,27 @@ export function getWalletClient() {
 
 // ── Comandos ──────────────────────────────────────────────────────────────────
 
-export async function balances(address) {
+async function getTokenBalance(target, symbol, token) {
+  try {
+    if (token.isNative) {
+      const bal = await publicClient.getBalance({ address: target })
+      return { symbol, balance: formatEther(bal) }
+    }
+
+    const bal = await publicClient.readContract({
+      address: token.address,
+      abi: ERC20_ABI,
+      functionName: 'balanceOf',
+      args: [target]
+    })
+
+    return { symbol, balance: formatUnits(bal, token.decimals) }
+  } catch (e) {
+    return { symbol, balance: 'Error' }
+  }
+}
+
+export async function balances(address, tokenInput = null) {
   const target = address ?? process.env.ADDRESS
   if (!target) { 
     console.error('❌  Proporciona una dirección o define ADDRESS en .env')
@@ -82,26 +102,14 @@ export async function balances(address) {
 
   console.log(`\nConsultando balances para ${target}`)
 
-  const promises = Object.entries(TOKENS).map(async ([symbol, token]) => {
-    try {
-      if (token.isNative) {
-        const bal = await publicClient.getBalance({ address: target })
-        return { symbol, balance: formatEther(bal) }
-      } else {
-        const bal = await publicClient.readContract({ 
-          address: token.address, 
-          abi: ERC20_ABI, 
-          functionName: 'balanceOf', 
-          args: [target] 
-        })
-        return { symbol, balance: formatUnits(bal, token.decimals) }
-      }
-    } catch (e) {
-      return { symbol, balance: 'Error' }
-    }
-  })
-
-  const results = await Promise.all(promises)
+  let results
+  if (tokenInput) {
+    const token = await resolveToken(tokenInput)
+    results = [await getTokenBalance(target, token.symbol, token)]
+  } else {
+    const promises = Object.entries(TOKENS).map(([symbol, token]) => getTokenBalance(target, symbol, token))
+    results = await Promise.all(promises)
+  }
   
   console.log(`\n=== Balances ===`)
   for (const res of results) {

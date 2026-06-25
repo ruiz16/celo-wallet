@@ -9,11 +9,19 @@ import { networkInfo } from './commands/network.js'
 import { history } from './commands/explorer.js'
 import { balances, send, generateWallet, exportWallet, fund, validateWallet, multisend, generateQR } from './commands/wallet.js'
 import { drain } from './commands/advanced.js'
+import { accountInfo, showAccountHelp, showTokenHelp, tokenInfo } from './commands/inspect.js'
 import './lib/env.js'
 import { isSepolia } from './lib/network.js'
 
 function isHelpFlag(value) {
   return value === 'help' || value === '--help' || value === '-h'
+}
+
+function getFlagValue(flagName) {
+  const args = process.argv.slice(3)
+  const index = args.findIndex(arg => arg === flagName)
+  if (index === -1) return null
+  return args[index + 1] ?? null
 }
 
 function showHelp() {
@@ -38,6 +46,7 @@ o define NETWORK=sepolia en tu archivo .env.
 
 💰 BALANCES Y TRANSFERENCIAS
   balances [address]         Muestra los balances de CELO, USDC, USDT, USDm, EURm, BRLm y COPM.
+  balances [address] --token <token> Consulta solo un token específico (símbolo o 0x...).
   send <to> <amount> <token> Envía tokens (usa el símbolo ej. USDC o la dirección 0x...).
   multisend <addresses> <amount> <token> Envía la misma cantidad a múltiples direcciones.
   validate <address>         Verifica si una billetera está activa en Celo (tiene balance o transacciones).
@@ -54,6 +63,8 @@ o define NETWORK=sepolia en tu archivo .env.
 📜 CONTRATOS INTELIGENTES
   contract info <address>    Evalúa un contrato, verifica su código, balance y muestra sus últimas transacciones.
   contract --help            Muestra ayuda detallada del módulo de contratos.
+  token info <token>         Muestra metadatos y red real de un token ERC20 o símbolo conocido.
+  account info <address>     Analiza una dirección y distingue billetera normal vs smart contract.
 
 📱 SOCIALCONNECT / ODIS
   socialconnect resolve <phone> Busca la dirección de Celo asociada a un número de teléfono (E.164).
@@ -77,6 +88,10 @@ switch (cmd) {
       showContractHelp()
     } else if (arg1 === 'socialconnect') {
       showSocialConnectHelp()
+    } else if (arg1 === 'account') {
+      showAccountHelp()
+    } else if (arg1 === 'token') {
+      showTokenHelp()
     } else {
       showHelp()
     }
@@ -92,7 +107,7 @@ switch (cmd) {
     exportWallet()
     break
   case 'balances':   
-    await balances(arg1)
+    await balances(arg1 && !arg1.startsWith('--') ? arg1 : process.env.ADDRESS, getFlagValue('--token'))
     break
   case 'drain':
     if (!arg1 || !arg2) {
@@ -147,6 +162,28 @@ switch (cmd) {
     } else {
       console.log('❌ Uso incorrecto. Prueba: npx celo-utils contract info <address>')
       console.log('   También puedes usar: npx celo-utils contract --help')
+      process.exit(1)
+    }
+    break
+  case 'account':
+    if (!arg1 || isHelpFlag(arg1) || (arg1 === 'info' && isHelpFlag(arg2))) {
+      showAccountHelp()
+    } else if (arg1 === 'info' && arg2) {
+      await accountInfo(arg2)
+    } else {
+      console.log('❌ Uso incorrecto. Prueba: npx celo-utils account info <address>')
+      console.log('   También puedes usar: npx celo-utils account --help')
+      process.exit(1)
+    }
+    break
+  case 'token':
+    if (!arg1 || isHelpFlag(arg1) || (arg1 === 'info' && isHelpFlag(arg2))) {
+      showTokenHelp()
+    } else if (arg1 === 'info' && arg2) {
+      await tokenInfo(arg2)
+    } else {
+      console.log('❌ Uso incorrecto. Prueba: npx celo-utils token info <symbol|address>')
+      console.log('   También puedes usar: npx celo-utils token --help')
       process.exit(1)
     }
     break
